@@ -114,9 +114,33 @@ var Diaporama = (function () {
   }
 
   // Économiseur d'écran / mise en veille de la télé : coupé tant que le diaporama défile, rétabli en
-  // pause et à la sortie
-  // La télé accepte la coupure mais finit par passer outre : on la renvoie à chaque photo.
-  var veilleActive = true;
+  // pause et à la sortie. La télé accepte setScreenSaver(OFF) mais finit par passer outre ; elle ne
+  // se met jamais en veille pendant une lecture vidéo : on lit donc en fond une vidéo noire et muette
+  // (silence.mp4, 10 min, relancée en boucle), cachée sous le diaporama.
+  var veilleActive = true, videoFond = false;
+  var av = (typeof webapis !== 'undefined' && webapis.avplay) ? webapis.avplay : null;
+
+  function fichierVideoFond() {
+    // AVPlay n'accepte que le chemin réel des fichiers de l'appli
+    return '/opt/usr/apps/' + tizen.application.getCurrentApplication().appInfo.packageId +
+      '/res/wgt/silence.mp4';
+  }
+
+  function lireVideoFond() {
+    try {
+      av.open(fichierVideoFond());
+      av.setDisplayRect(0, 0, 1, 1);
+      av.setListener({
+        onstreamcompleted: function () { setTimeout(function () { if (videoFond) { arreterAv(); lireVideoFond(); } }, 0); },
+        onerror: function (e) { console.log('[Diaporama] vidéo de fond : ' + e); }
+      });
+      av.prepareAsync(function () { if (videoFond) av.play(); else arreterAv(); },
+        function (e) { console.log('[Diaporama] vidéo de fond : ' + (e && e.name)); });
+    } catch (e) { console.log('[Diaporama] vidéo de fond : ' + e.message); }
+  }
+
+  function arreterAv() { try { av.stop(); av.close(); } catch (e) {} }
+
   function ecranDeVeille(actif) {
     if (actif && veilleActive) return;
     veilleActive = actif;
@@ -124,6 +148,10 @@ var Diaporama = (function () {
       var etats = webapis.appcommon.AppCommonScreenSaverState;
       webapis.appcommon.setScreenSaver(actif ? etats.SCREEN_SAVER_ON : etats.SCREEN_SAVER_OFF);
     } catch (e) { console.log('[Diaporama] setScreenSaver : ' + e.message); }
+    if (av && videoFond === actif) {
+      videoFond = !actif;
+      if (videoFond) lireVideoFond(); else arreterAv();
+    }
   }
 
   function fermer() {

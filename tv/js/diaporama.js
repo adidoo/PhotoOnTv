@@ -120,6 +120,20 @@ var Diaporama = (function () {
   var veilleActive = true, videoFond = false;
   var av = (typeof webapis !== 'undefined' && webapis.avplay) ? webapis.avplay : null;
 
+  // Journal de diagnostic de la veille (localStorage « journalVeille », 100 dernières lignes)
+  var journal = [];
+  try { journal = JSON.parse(localStorage.getItem('journalVeille')) || []; } catch (e) {}
+  function tracer(texte) {
+    journal.push(new Date().toTimeString().slice(0, 8) + ' ' + texte);
+    if (journal.length > 100) journal.splice(0, journal.length - 100);
+    try { localStorage.setItem('journalVeille', JSON.stringify(journal)); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function () {
+    tracer('visibilité ' + document.visibilityState + (av ? ', lecteur ' + etatAv() : ''));
+  });
+
+  function etatAv() { try { return av.getState(); } catch (e) { return '?'; } }
+
   function fichierVideoFond() {
     // AVPlay n'accepte que le chemin réel des fichiers de l'appli
     return '/opt/usr/apps/' + tizen.application.getCurrentApplication().appInfo.packageId +
@@ -127,16 +141,19 @@ var Diaporama = (function () {
   }
 
   function lireVideoFond() {
+    tracer('vidéo de fond : lancement');
     try {
       av.open(fichierVideoFond());
-      av.setDisplayRect(0, 0, 1, 1);
+      // Plein écran : la vidéo reste sous le fond noir du diaporama
+      av.setDisplayRect(0, 0, 1920, 1080);
       av.setListener({
         onstreamcompleted: function () { setTimeout(function () { if (videoFond) { arreterAv(); lireVideoFond(); } }, 0); },
-        onerror: function (e) { console.log('[Diaporama] vidéo de fond : ' + e); }
+        onerror: function (e) { tracer('vidéo de fond : erreur ' + e); },
+        onevent: function (type, donnee) { tracer('vidéo de fond : évènement ' + type + ' ' + donnee); }
       });
       av.prepareAsync(function () { if (videoFond) av.play(); else arreterAv(); },
-        function (e) { console.log('[Diaporama] vidéo de fond : ' + (e && e.name)); });
-    } catch (e) { console.log('[Diaporama] vidéo de fond : ' + e.message); }
+        function (e) { tracer('vidéo de fond : échec ' + (e && e.name)); });
+    } catch (e) { tracer('vidéo de fond : exception ' + e.message); }
   }
 
   function arreterAv() { try { av.stop(); av.close(); } catch (e) {} }
@@ -147,10 +164,15 @@ var Diaporama = (function () {
     try {
       var etats = webapis.appcommon.AppCommonScreenSaverState;
       webapis.appcommon.setScreenSaver(actif ? etats.SCREEN_SAVER_ON : etats.SCREEN_SAVER_OFF);
-    } catch (e) { console.log('[Diaporama] setScreenSaver : ' + e.message); }
-    if (av && videoFond === actif) {
+    } catch (e) { tracer('setScreenSaver : ' + e.message); }
+    if (!av) return;
+    if (videoFond === actif) {
       videoFond = !actif;
-      if (videoFond) lireVideoFond(); else arreterAv();
+      if (videoFond) lireVideoFond(); else { arreterAv(); tracer('vidéo de fond : arrêt'); }
+    } else if (videoFond) {
+      // Vérifiée à chaque photo : relancée si quelque chose l'a arrêtée
+      var e = etatAv();
+      if (e !== 'PLAYING' && e !== 'READY') { tracer('vidéo de fond trouvée ' + e + ', relance'); arreterAv(); lireVideoFond(); }
     }
   }
 

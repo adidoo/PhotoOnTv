@@ -85,6 +85,11 @@ var Diaporama = (function () {
 
   function aller(i) {
     if (!ouvert || !total) return;
+    if (ordre === 'random' && i >= total) {
+      // Fin du tour en aléatoire : nouveau mélange, pour ne pas revoir la même suite
+      graine = Math.floor(Math.random() * 1e9);
+      paquets = {}; prets = {};
+    }
     i = ((i % total) + total) % total;   // le diaporama boucle
     rang = i;
     clearTimeout(minuterie);

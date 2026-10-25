@@ -115,9 +115,10 @@ var Diaporama = (function () {
 
   // Économiseur d'écran / mise en veille de la télé : coupé tant que le diaporama défile, rétabli en
   // pause et à la sortie
+  // La télé accepte la coupure mais finit par passer outre : on la renvoie à chaque photo.
   var veilleActive = true;
   function ecranDeVeille(actif) {
-    if (actif === veilleActive) return;
+    if (actif && veilleActive) return;
     veilleActive = actif;
     try {
       var etats = webapis.appcommon.AppCommonScreenSaverState;

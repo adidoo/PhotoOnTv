@@ -49,6 +49,16 @@ var Api = (function () {
     fichier: function (chemin) {
       return CONFIG.serveur + '/api/file/' + chemin.split('/').map(encodeURIComponent).join('/');
     },
+    // Paquet de photos d'un dossier et de ses sous-dossiers (diaporama) : options { order, seed, offset, n, start }
+    photos: function (chemin, o) {
+      var extra = '&order=' + o.order + '&n=' + (o.n || 200) + '&offset=' + (o.offset || 0) +
+        (o.seed !== undefined ? '&seed=' + o.seed : '') +
+        (o.start ? '&start=' + encodeURIComponent(o.start) : '');
+      return fetch(url('/api/photos', chemin, extra)).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      });
+    },
     // Dimensions, rotation et ratio d'une vidéo (ffprobe côté serveur) ; null si indisponible
     info: function (chemin) {
       return fetch(url('/api/info', chemin)).then(function (r) {

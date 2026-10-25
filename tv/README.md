@@ -7,17 +7,29 @@ Appli web pour les télés Samsung (Tizen 6 et plus, testée sur Tizen 9), pilot
   position est mémorisée quand on remonte.
 - **Plein écran** : vignette 1200 px immédiate, puis l'original (JPEG, PNG, GIF, WebP seulement) si l'on
   reste sur la photo ; les deux voisines de chaque côté sont préchargées.
-- **Vidéo** : lecteur natif AVPlay (sur la télé) ou `<video>` (navigateur).
+- **Vidéo** : lecteur natif AVPlay (sur la télé) ou `<video>` (navigateur), rotation et ratio réglés
+  d'après `/api/info`.
+- **Boutons de l'en-tête** (↑ depuis la première ligne) :
+  - **Ordre** : inverse l'ordre des dossiers et des photos dans toutes les galeries (mémorisé) ;
+  - **Diaporama** : photos du dossier et de tous ses sous-dossiers, parcourus un à un dans l'ordre
+    d'affichage, à partir de la photo sélectionnée ;
+  - **Aléatoire** : photos du dossier et de tous ses sous-dossiers, mélangées (à la racine : toute la
+    photothèque).
+
+  Le diaporama ignore les vidéos, n'affiche rien par-dessus les photos et boucle ; en sortant, on
+  arrive dans le dossier de la photo affichée, sur cette photo. Le délai (5 à 60 s) est mémorisé.
 
 ## Touches
 
-| Touche | Grille | Plein écran | Vidéo |
-|---|---|---|---|
-| ← → ↑ ↓ | déplacement | photo précédente / suivante | −10 s / +10 s |
-| OK | ouvrir | lire la vidéo | pause / lecture |
-| Retour | dossier parent (2 fois à la racine : quitter) | grille | arrêt |
-| CH+ / CH− | page précédente / suivante | | |
-| ⏯ ⏹ ⏩ ⏪ | | | pause, arrêt, ±10 s |
+| Touche | Grille | Plein écran | Vidéo | Diaporama |
+|---|---|---|---|---|
+| ← → | déplacement | photo précédente / suivante | −10 s / +10 s | photo précédente / suivante |
+| ↑ ↓ | déplacement (↑ en haut : boutons) | | | délai +5 s / −5 s |
+| OK | ouvrir | lire la vidéo | pause / lecture | pause / reprise |
+| Retour | dossier parent (2 fois à la racine : quitter) | grille | arrêt | sortie sur la photo affichée |
+| CH+ / CH− | page précédente / suivante | | | |
+| ⏯ | diaporama du dossier sélectionné, ou à partir de la photo | | pause / lecture | pause / reprise |
+| ⏹ ⏩ ⏪ | | | arrêt, ±10 s | sortie, suivante, précédente |
 
 Dans un navigateur : Retour arrière ou Échap = Retour, Page préc./suiv. = CH±, Espace = ⏯.
 

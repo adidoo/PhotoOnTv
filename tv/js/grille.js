@@ -9,6 +9,7 @@ var Grille = (function () {
   var cols, larg, dossiers = [], medias = [], lignes = [], total = 0;
   var tuiles = {};          // index -> élément
   var courant = 0, defilement = 0;
+  var focusMasque = false;   // sélection sur les boutons de l'en-tête
 
   function construireLignes() {
     lignes = [];
@@ -64,7 +65,7 @@ var Grille = (function () {
       t.style.height = H_IMAGE + 'px';
       image(t, Api.vignette(m.path, 'm', m.mtime));
     }
-    if (i === courant) t.classList.add('focus');
+    if (i === courant && !focusMasque) t.classList.add('focus');
     plan.appendChild(t);
     return t;
   }
@@ -110,7 +111,7 @@ var Grille = (function () {
     courant = i;
     suivre();
     rendre();
-    if (tuiles[courant]) tuiles[courant].classList.add('focus');
+    if (tuiles[courant] && !focusMasque) tuiles[courant].classList.add('focus');
     if (Grille.surSelection) Grille.surSelection(selection());
   }
 
@@ -165,6 +166,13 @@ var Grille = (function () {
     // Position dans la liste des médias (visionneuse) -> sélection dans la grille
     placerMedia: function (rang) { placer(dossiers.length + rang); },
     placer: placer,
+    // Ligne de la sélection (-1 si la grille est vide)
+    ligne: function () { return total ? ligneDe(courant) : -1; },
+    // Cache ou réaffiche le cadre de sélection (sélection partie sur l'en-tête)
+    masquerFocus: function (m) {
+      focusMasque = m;
+      if (tuiles[courant]) tuiles[courant].classList.toggle('focus', !m);
+    },
     selection: selection,
     index: function () { return courant; },
     surSelection: null

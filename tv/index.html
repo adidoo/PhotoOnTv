@@ -8,7 +8,14 @@
 <body>
 <header>
   <div id="fil"></div>
-  <div id="compteurs"></div>
+  <div id="droite">
+    <div id="compteurs"></div>
+    <div id="actions">
+      <div class="bouton" id="b-ordre" data-action="ordre"><span class="icone"></span><span class="libelle">Ordre</span></div>
+      <div class="bouton" id="b-diaporama" data-action="diaporama"><span class="icone"></span><span class="libelle">Diaporama</span></div>
+      <div class="bouton" id="b-aleatoire" data-action="aleatoire"><span class="icone"></span><span class="libelle">Aléatoire</span></div>
+    </div>
+  </div>
 </header>
 
 <main id="vue">
@@ -35,6 +42,12 @@
   </div>
 </div>
 
+<!-- Diaporama : deux calques pour le fondu, rien en surimpression -->
+<div id="diapo">
+  <img id="d-a" alt="">
+  <img id="d-b" alt="">
+</div>
+
 <div id="chargement"></div>
 <div id="message"></div>
 
@@ -44,6 +57,7 @@
 <script src="js/grille.js"></script>
 <script src="js/video.js"></script>
 <script src="js/visionneuse.js"></script>
+<script src="js/diaporama.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

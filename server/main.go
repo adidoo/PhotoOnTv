@@ -48,6 +48,7 @@ func main() {
 	mux.HandleFunc("GET /api/status", s.status)
 	mux.HandleFunc("GET /api/info", s.info)
 	mux.HandleFunc("GET /api/folder", s.folder)
+	mux.HandleFunc("GET /api/photos", s.photos)
 	mux.HandleFunc("GET /api/thumb", s.thumb)
 	mux.HandleFunc("GET /api/file", s.file)
 	mux.HandleFunc("GET /api/file/{path...}", s.file)

@@ -78,6 +78,25 @@ Contenu **direct** d'un dossier (pas de récursion).
 - `mtime` : secondes Unix. Sert aussi de version de cache (`&v=<mtime>`).
 - 404 si le dossier n'existe pas.
 
+## `GET /api/photos?path=<dossier>&order=asc|desc|random[&seed=<n>][&offset=<i>][&n=<taille>][&start=<photo>]`
+
+Photos (pas de vidéos) d'un dossier **et de tous ses sous-dossiers**, par paquets, pour le diaporama.
+
+```json
+{"path": "2015", "total": 8123, "offset": 0,
+ "items": [{"name": "02.jpg", "path": "2015/…/02.jpg", "type": "photo", "size": 1131276, "mtime": 1486771200}]}
+```
+
+- `order=asc` : ordre de la grille, en profondeur — chaque sous-dossier entièrement (récursivement),
+  puis les photos du dossier lui-même. `desc` : tri inversé à chaque niveau (même parcours que la
+  grille en ordre inversé). `random` : toutes les photos mélangées ; même `seed` = même mélange, pour
+  que les paquets successifs d'un diaporama se suivent.
+- `offset` : rang du premier élément du paquet (défaut 0) ; `n` : taille du paquet (défaut 200,
+  max 1000) ; `total` : nombre total de photos. Le paquet suivant commence à `offset + n`.
+- `start` (asc/desc) : chemin d'une photo ; le paquet commence à cette photo (l'`offset` renvoyé
+  indique sa position).
+- La liste complète est gardée ~10 min côté serveur.
+
 ## `GET /api/thumb?path=<chemin média>&size=s|m|l[&v=<mtime>]`
 
 Vignette JPEG d'une photo ou d'une vidéo.

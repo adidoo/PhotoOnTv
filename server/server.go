@@ -23,6 +23,9 @@ type server struct {
 	cfg   config
 	mu    sync.Mutex
 	cache map[string]cachedFolder
+	gen   *generator // nil si la génération est désactivée (pas de CACHE_DIR)
+
+	opened sync.Map // dossiers déjà ouverts par l'appli : leurs médias à générer passent devant
 }
 
 type cachedFolder struct {
@@ -57,8 +60,68 @@ type mediaEntry struct {
 
 func newServer(cfg config) *server {
 	s := &server{cfg: cfg, cache: map[string]cachedFolder{}}
-	go s.warmUp()
+	if cfg.cacheDir != "" {
+		g, err := newGenerator(cfg.cacheDir)
+		if err != nil {
+			log.Printf("génération des vignettes désactivée : %v", err)
+		} else {
+			s.gen = g
+			go g.demandWorker()
+		}
+	}
+	go func() {
+		s.warmUp()
+		if s.gen != nil {
+			s.scanLoop()
+		}
+	}()
 	return s
+}
+
+// prioritize met en tête de file les médias sans vignette d'un dossier que l'appli vient d'ouvrir.
+func (s *server) prioritize(rel string) {
+	if s.gen == nil {
+		return
+	}
+	if _, deja := s.opened.LoadOrStore(rel, true); deja {
+		return
+	}
+	dir := filepath.Join(s.cfg.root, filepath.FromSlash(rel))
+	_, media, err := s.readSorted(dir)
+	if err != nil {
+		return
+	}
+	for _, e := range media {
+		st, err := e.Info()
+		if err != nil {
+			continue
+		}
+		mrel, abs := path.Join(rel, e.Name()), filepath.Join(dir, e.Name())
+		key := cacheKey(mrel, st)
+		if s.gen.needsGeneration(abs, key) {
+			s.gen.enqueue(genJob{rel: mrel, abs: abs, key: key, kind: mediaType(mrel), smallOnly: isHeic(mrel)})
+		}
+	}
+}
+
+func (s *server) status(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if s.gen == nil {
+		json.NewEncoder(w).Encode(map[string]any{"generation": false})
+		return
+	}
+	g := s.gen
+	json.NewEncoder(w).Encode(map[string]any{
+		"generation": true,
+		"scanning":   g.scanning.Load(),
+		"todo":       g.todo.Load(),
+		"done":       g.done.Load(),
+		"failed":     g.failed.Load(),
+		"on_demand":  g.onDemand.Load(),
+		"queue":      len(g.demand),
+		"current":    g.current.Load(),
+		"scan_start": g.scanStart.Load(),
+	})
 }
 
 // hidden indique si un nom de dossier ou de fichier doit être ignoré.
@@ -110,6 +173,7 @@ func (s *server) folder(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Write(body)
+	go s.prioritize(rel)
 }
 
 // folderBody renvoie le JSON d'un dossier, depuis le cache s'il est encore valable.
@@ -208,9 +272,8 @@ func (s *server) listFolder(rel, dir string) (*folderJSON, error) {
 
 // cover choisit le premier média du dossier, sinon cherche en profondeur dans ses sous-dossiers.
 func (s *server) cover(rel string, dirs []string, media []fs.DirEntry, depth int) *string {
-	if len(media) > 0 {
-		c := path.Join(rel, media[0].Name())
-		return &c
+	if c := s.pickCover(rel, media); c != nil {
+		return c
 	}
 	if depth == 0 {
 		return nil
@@ -226,6 +289,56 @@ func (s *server) cover(rel string, dirs []string, media []fs.DirEntry, depth int
 		}
 	}
 	return nil
+}
+
+// pickCover choisit la couverture parmi les médias d'un dossier : de préférence le premier qui a
+// une petite vignette QNAP (une seule lecture de « .@__thumb »), sinon une déjà générée, sinon la
+// première photo, sinon le premier média.
+func (s *server) pickCover(rel string, media []fs.DirEntry) *string {
+	if len(media) == 0 {
+		return nil
+	}
+	choix := func(e fs.DirEntry) *string { c := path.Join(rel, e.Name()); return &c }
+	dir := filepath.Join(s.cfg.root, filepath.FromSlash(rel))
+	if entries, err := os.ReadDir(filepath.Join(dir, qnapThumbDir)); err == nil {
+		noms := make(map[string]bool, len(entries))
+		for _, t := range entries {
+			noms[t.Name()] = true
+		}
+		for _, e := range media {
+			nom := e.Name()
+			if qnapIgnoredExt[ext(nom)] {
+				continue
+			}
+			stem := strings.TrimSuffix(nom, filepath.Ext(nom))
+			if noms[nom+".jpg"] {
+				return choix(e)
+			}
+			for _, prefix := range []string{"s100", "default", "a100", "adefault"} {
+				if noms[prefix+nom] || noms[prefix+stem+".jpg"] {
+					return choix(e)
+				}
+			}
+		}
+	}
+	if s.gen != nil {
+		for i, e := range media {
+			if i == 30 {
+				break
+			}
+			if st, err := e.Info(); err == nil {
+				if p, _, _ := s.gen.cached(cacheKey(path.Join(rel, e.Name()), st), "s"); p != "" {
+					return choix(e)
+				}
+			}
+		}
+	}
+	for _, e := range media {
+		if mediaType(e.Name()) == "photo" {
+			return choix(e)
+		}
+	}
+	return choix(media[0])
 }
 
 // warmUp parcourt toute l'arborescence au démarrage pour remplir le cache des dossiers

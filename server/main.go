@@ -10,12 +10,13 @@ import (
 	"time"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 type config struct {
 	root    string          // racine des photos (montée en lecture seule)
 	listen  string          // adresse d'écoute
 	exclude map[string]bool // noms de dossiers ignorés, en plus de ceux commençant par « . » ou « @ »
+	cacheDir string         // vignettes générées ; vide = pas de génération
 }
 
 func env(nom, defaut string) string {
@@ -29,7 +30,8 @@ func main() {
 	cfg := config{
 		root:    env("PHOTOS_ROOT", "/photos"),
 		listen:  env("LISTEN", ":8080"),
-		exclude: map[string]bool{},
+		exclude:  map[string]bool{},
+		cacheDir: os.Getenv("CACHE_DIR"),
 	}
 	for _, n := range strings.Split(os.Getenv("EXCLUDE"), ",") {
 		if n = strings.TrimSpace(n); n != "" {
@@ -43,6 +45,8 @@ func main() {
 	s := newServer(cfg)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", s.health)
+	mux.HandleFunc("GET /api/status", s.status)
+	mux.HandleFunc("GET /api/info", s.info)
 	mux.HandleFunc("GET /api/folder", s.folder)
 	mux.HandleFunc("GET /api/thumb", s.thumb)
 	mux.HandleFunc("GET /api/file", s.file)

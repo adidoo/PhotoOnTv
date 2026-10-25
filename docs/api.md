@@ -16,7 +16,20 @@ Contrat entre le serveur (`server/`) et l'appli TV (`tv/`). Toute évolution pas
 
 ## `GET /api/health`
 
-`{"ok": true, "version": "0.1.0", "root": "/photos"}`
+`{"ok": true, "version": "0.2.0", "root": "/photos"}`
+
+## `GET /api/status`
+
+État de la génération des vignettes (information, pour le suivi) :
+
+```json
+{"generation": true, "scanning": true, "todo": 7345, "done": 71, "failed": 0,
+ "on_demand": 16, "queue": 0, "current": "2013/2013-05 - Divers/DSCN2831.MOV", "scan_start": 1792920967}
+```
+
+`todo` / `done` : médias à générer / faits dans le balayage en cours ; `on_demand` : générés à la
+demande de l'appli depuis le démarrage ; `queue` : file prioritaire. `{"generation": false}` si le
+serveur n'a pas de cache (`CACHE_DIR` vide).
 
 ## `GET /api/folder?path=<chemin>`
 
@@ -57,8 +70,9 @@ Contenu **direct** d'un dossier (pas de récursion).
 
 - `parent` : `null` à la racine.
 - `folders[].folders` / `folders[].items` : nombre de sous-dossiers / de médias **directs** du sous-dossier.
-- `folders[].cover` : chemin d'un média servant de couverture (premier média du dossier, sinon du premier
-  sous-dossier qui en a, en profondeur) ; `null` si le dossier ne contient aucun média.
+- `folders[].cover` : chemin d'un média servant de couverture : le premier média du dossier qui a une
+  vignette (QNAP ou déjà générée), sinon la première photo, sinon le premier média ; si le dossier n'a
+  aucun média direct, même règle dans ses sous-dossiers, en profondeur ; `null` s'il n'y a aucun média.
 - `type` : `photo` (jpg, jpeg, png, gif, tif, tiff, heic, heif, cr2, nef, arw, dng, webp) ou `video`
   (mp4, mov, m4v, 3gp, mts, m2ts, avi, mpg, mpeg, mkv, wmv). Les autres fichiers sont ignorés.
 - `mtime` : secondes Unix. Sert aussi de version de cache (`&v=<mtime>`).
@@ -78,9 +92,16 @@ Les tailles réelles dépendent de la source (vignettes QNAP, ou `<nom>.jpg` de 
 vidéos) : l'appli doit afficher l'image en `object-fit`, sans supposer ses dimensions.
 
 - Réponse `image/jpeg`, `Cache-Control: public, max-age=31536000, immutable`, `ETag`.
-- Source : vignettes QuMagie existantes (`.@__thumb/`), sinon cache généré par le serveur.
-- **404** si aucune vignette n'est (encore) disponible : l'appli affiche une icône générique (photo ou
-  vidéo) et ne réessaie pas en boucle.
+- Source, dans l'ordre : vignette QNAP de la bonne taille (`.@__thumb/`), vignette générée par le
+  serveur (cache à part), vignette QNAP d'une autre taille.
+- Média sans vignette : le serveur le génère **à la demande, en priorité** sur le balayage de fond, et
+  attend jusqu'à ~4 s (photo) ou ~8 s (vidéo) avant de répondre. Ouvrir un dossier (`/api/folder`)
+  met aussi ses médias sans vignette en tête de file. Ordres de grandeur sur un petit NAS : `s`/`m`
+  d'une HEIC 1 à 3 s (miniature intégrée), `l` d'une HEIC ~5 s, vidéo ~3 s.
+- `l` d'une HEIC pas encore prête : le serveur peut renvoyer provisoirement la `m`, avec
+  `Cache-Control: public, max-age=60` (pas `immutable`) pour que la vraie `l` la remplace ensuite.
+- **404** si aucune vignette n'est disponible dans le délai (ou fichier illisible) : l'appli affiche une
+  icône générique (photo ou vidéo) et ne réessaie pas en boucle.
 
 ## `GET /api/file/<chemin média>` (ou `GET /api/file?path=<chemin média>`)
 
@@ -93,3 +114,22 @@ lecteur natif de la télé (AVPlay) a besoin pour reconnaître le format. L'appl
 - Usage : vidéos (lecture directe par la télé) et photo pleine résolution chargée en fond après la `l`.
   L'appli ne demande l'original **que pour les jpg/jpeg/png/gif/webp** (la télé ne décode pas HEIC/CR2/TIF :
   pour ceux-là, elle reste sur la vignette `l`).
+
+## `GET /api/info?path=<chemin vidéo>`
+
+Caractéristiques d'une vidéo (ffprobe), pour régler la rotation et le ratio du lecteur :
+
+```json
+{"width": 1920, "height": 1080, "rotation": 90, "dar": "16:9", "dar_value": 1.778,
+ "duration": 24.95, "vcodec": "h264", "acodec": "aac", "container": "mov,mp4,m4a,3gp,3g2,mj2"}
+```
+
+- `width` / `height` : dimensions codées (avant rotation).
+- `rotation` : 0, 90, 180 ou 270, sens horaire, à appliquer à l'affichage (téléphone tenu en portrait :
+  90).
+- `dar` : ratio d'affichage tenant compte des pixels non carrés (une vidéo AVCHD 1440×1080 donne
+  `16:9`) ; chaîne `"w:h"` quand le fichier l'indique, sinon la valeur décimale en chaîne ;
+  `dar_value` : même ratio en nombre.
+- `duration` en secondes ; `vcodec` / `acodec` / `container` : noms ffmpeg.
+- 400 si le chemin n'est pas une vidéo, 422 si ffprobe ne lit pas le fichier (délai 5 s). Résultats
+  gardés en mémoire côté serveur.

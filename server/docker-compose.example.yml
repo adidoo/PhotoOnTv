@@ -15,4 +15,6 @@ services:
       TZ: Europe/Paris
     volumes:
       - /share/Photos:/photos:ro
-    mem_limit: 256m
+      # vignettes générées (HEIC, vidéos…) : dossier inscriptible par l'utilisateur 65534 du conteneur
+      - ./cache:/cache
+    mem_limit: 512m

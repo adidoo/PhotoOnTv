@@ -1,0 +1,139 @@
+/* PhotoOnTv — écran 1920×1080, lisible à 3 m */
+:root {
+  --fond: #0b0f14;
+  --carte: #18202a;
+  --texte: #eef2f6;
+  --doux: #8b98a9;
+  --accent: #4fc3f7;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; width: 1920px; height: 1080px; overflow: hidden;
+  background: var(--fond); color: var(--texte);
+  font-family: "SamsungOne", "Roboto", sans-serif;
+}
+/* Pendant la lecture AVPlay, la vidéo est dessinée sous la page : tout doit être transparent */
+body.en-lecture, body.en-lecture #lecteur { background: transparent; }
+body.en-lecture header, body.en-lecture main, body.en-lecture #visio { visibility: hidden; }
+
+header {
+  height: 140px; padding: 0 64px;
+  display: flex; align-items: center; justify-content: space-between; gap: 48px;
+}
+#fil { font-size: 40px; color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fil span + span::before { content: "›"; margin: 0 18px; color: #4a5566; }
+#fil .dernier { color: var(--texte); }
+#compteurs { font-size: 30px; color: var(--doux); white-space: nowrap; }
+
+main { position: relative; height: 940px; overflow: hidden; }
+#plan { position: relative; left: 64px; width: 1792px; transition: transform 160ms ease-out; will-change: transform; }
+
+.tuile {
+  position: absolute; border-radius: 14px;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+.tuile img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+.tuile.focus { transform: scale(1.07); z-index: 2; box-shadow: 0 0 0 5px var(--accent), 0 14px 40px rgba(0, 0, 0, .6); }
+
+.media { background: var(--carte); overflow: hidden; }
+.dossier .cadre {
+  height: 186px; border-radius: 14px; background: var(--carte); overflow: hidden; position: relative;
+}
+.dossier .cadre::after {   /* liseré « pile de photos » */
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8px;
+  background: rgba(255, 255, 255, .18);
+}
+.dossier .nom {
+  font-size: 26px; margin-top: 12px; padding: 0 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dossier .compte { font-size: 21px; color: var(--doux); padding: 2px 4px 0; }
+.dossier.focus .nom { color: var(--accent); }
+
+/* Icônes génériques quand il n'y a pas de vignette */
+.sans-image.media, .sans-image .cadre {
+  background: var(--carte) center / 72px no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b6878'%3E%3Cpath d='M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z'/%3E%3C/svg%3E");
+}
+.dossier.sans-image .cadre {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b6878'%3E%3Cpath d='M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z'/%3E%3C/svg%3E");
+}
+.sans-image.video {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235b6878'%3E%3Cpath d='M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z'/%3E%3C/svg%3E");
+}
+/* Pastille « lecture » sur les vidéos */
+.video::after {
+  content: ""; position: absolute; left: 14px; bottom: 14px; width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(0, 0, 0, .55) center / 26px no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E");
+}
+
+#vide {
+  display: none; position: absolute; left: 0; right: 0; top: 380px;
+  text-align: center; font-size: 36px; color: var(--doux);
+}
+#vide.visible { display: block; }
+
+/* ---------- Visionneuse ---------- */
+#visio { display: none; position: fixed; inset: 0; background: #000; z-index: 10; }
+#visio.ouvert { display: block; }
+#v-image {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  transition: opacity 120ms;
+}
+#v-image.attente { opacity: .35; }
+#v-absent {
+  display: none; position: absolute; left: 0; right: 0; top: 500px;
+  text-align: center; font-size: 36px; color: var(--doux);
+}
+#visio.absent #v-absent { display: block; }
+#visio.absent #v-image { display: none; }
+#v-lecture {
+  display: none; position: absolute; left: 50%; top: 50%; width: 160px; height: 160px; margin: -80px 0 0 -80px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .55) center / 80px no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E");
+}
+#visio.est-video #v-lecture { display: block; }
+#v-info {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 64px 40px;
+  display: flex; justify-content: space-between; font-size: 32px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .7));
+  opacity: 0; transition: opacity 300ms;
+}
+#v-info.visible { opacity: 1; }
+#v-position { color: var(--doux); }
+
+/* ---------- Lecteur vidéo ---------- */
+#lecteur { display: none; position: fixed; inset: 0; background: #000; z-index: 20; }
+#lecteur.ouvert { display: block; }
+#av-player, #video-html { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+#video-html { display: none; background: #000; }
+#lecteur.ouvert:not(.avplay) #video-html { display: block; }
+#lecteur.avplay #video-html, #lecteur:not(.avplay) #av-player { display: none; }
+#l-barre {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 64px 44px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .75));
+  font-size: 30px; opacity: 0; transition: opacity 300ms;
+}
+#l-barre.visible { opacity: 1; }
+#l-progression { height: 8px; margin: 18px 0 14px; border-radius: 4px; background: rgba(255, 255, 255, .25); }
+#l-avance { height: 100%; width: 0; border-radius: 4px; background: var(--accent); }
+#l-temps { color: var(--doux); }
+
+/* ---------- Divers ---------- */
+#chargement {
+  display: none; position: fixed; left: 50%; top: 540px; width: 64px; height: 64px; margin: -32px;
+  border: 6px solid rgba(255, 255, 255, .2); border-top-color: var(--accent); border-radius: 50%;
+  animation: tourne 0.8s linear infinite; z-index: 30;
+}
+#chargement.visible { display: block; }
+@keyframes tourne { to { transform: rotate(360deg); } }
+
+#message {
+  position: fixed; left: 50%; bottom: 64px; transform: translateX(-50%);
+  background: var(--carte); padding: 18px 40px; border-radius: 40px; font-size: 30px;
+  opacity: 0; transition: opacity 200ms; z-index: 40;
+}
+#message.visible { opacity: 1; }

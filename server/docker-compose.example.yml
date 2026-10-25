@@ -1,0 +1,18 @@
+# Exemple pour Container Station (QNAP) ou tout hôte Docker : copier en docker-compose.yml et adapter
+# le chemin des photos. Le dossier est monté en lecture seule : le serveur n'écrit jamais dedans.
+services:
+  photoontv:
+    build: .
+    image: photoontv:latest
+    container_name: photoontv
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Noms de dossiers à masquer, séparés par des virgules (les noms commençant par « . » ou « @ »
+      # sont toujours masqués)
+      EXCLUDE: ""
+      TZ: Europe/Paris
+    volumes:
+      - /share/Photos:/photos:ro
+    mem_limit: 256m

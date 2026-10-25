@@ -1,0 +1,13 @@
+# --- Appli TV ---
+# Configuration locale (adresse du serveur) et réglages de déploiement
+tv/js/config.js
+deployer.local.ps1
+# Paquets construits par deployer.ps1
+build/
+*.wgt
+# Fichiers générés par la signature Tizen (tizen package)
+author-signature.xml
+signature1.xml
+.manifest.tmp
+# Outils Python
+__pycache__/

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>PhotoOnTv</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <div id="fil"></div>
+  <div id="compteurs"></div>
+</header>
+
+<main id="vue">
+  <div id="plan"></div>
+  <div id="vide">Dossier vide</div>
+</main>
+
+<!-- Visionneuse plein écran (photos et aperçu des vidéos) -->
+<div id="visio">
+  <img id="v-image" alt="">
+  <div id="v-absent">Aperçu indisponible</div>
+  <div id="v-lecture"></div>
+  <div id="v-info"><span id="v-nom"></span><span id="v-position"></span></div>
+</div>
+
+<!-- Lecteur vidéo : AVPlay sur la télé, <video> ailleurs -->
+<div id="lecteur">
+  <object id="av-player" type="application/avplayer"></object>
+  <video id="video-html"></video>
+  <div id="l-barre">
+    <div id="l-nom"></div>
+    <div id="l-progression"><div id="l-avance"></div></div>
+    <div id="l-temps"></div>
+  </div>
+</div>
+
+<div id="chargement"></div>
+<div id="message"></div>
+
+<script src="$WEBAPIS/webapis/webapis.js"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/grille.js"></script>
+<script src="js/video.js"></script>
+<script src="js/visionneuse.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

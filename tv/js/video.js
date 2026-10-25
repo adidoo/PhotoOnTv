@@ -53,23 +53,25 @@ var Video = (function () {
   }
 
   // AVPlay ignore la rotation des vidéos de téléphone et le rapport de pixels des MTS (1440×1080
-  // affiché en 16:9) : on règle nous-mêmes la rotation et un rectangle au bon ratio, rempli en entier.
+  // affiché en 16:9).
+  // - Rotation : setDisplayRotation sur l'écran entier en LETTER_BOX (vérifié sur la télé ; un
+  //   rectangle réduit est alors mal placé et l'image écrasée).
+  // - Sans rotation : rectangle au bon ratio, rempli en entier (FULL_SCREEN).
   function regler(info) {
     var rot = info ? ((info.rotation || 0) % 360 + 360) % 360 : 0;
     var r = info ? (ratio(info.dar) || (info.width && info.height ? info.width / info.height : 0)) : 0;
-    if (rot === 90 || rot === 270) r = r ? 1 / r : 0;
-    if (!r) {
+    if (rot || !r) {
       av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
       av.setDisplayRect(0, 0, 1920, 1080);
+      if (rot) {
+        try { av.setDisplayRotation('PLAYER_DISPLAY_ROTATION_' + rot); } catch (e) {}
+      }
       return;
     }
     var w = 1920, h = Math.round(1920 / r);
     if (h > 1080) { h = 1080; w = Math.round(1080 * r); }
     av.setDisplayMethod('PLAYER_DISPLAY_MODE_FULL_SCREEN');
     av.setDisplayRect(Math.round((1920 - w) / 2), Math.round((1080 - h) / 2), w, h);
-    if (rot) {
-      try { av.setDisplayRotation('PLAYER_DISPLAY_ROTATION_' + rot); } catch (e) {}
-    }
   }
 
   // info : Promise des infos de la vidéo (Api.info), attendue au plus 1,5 s

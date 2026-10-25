@@ -16,7 +16,7 @@ Appli web pour les télés Samsung (Tizen 6 et plus, testée sur Tizen 9), pilot
   - **Aléatoire** : photos du dossier et de tous ses sous-dossiers, mélangées (à la racine : toute la
     photothèque).
 
-  Le diaporama ignore les vidéos, n'affiche rien par-dessus les photos et boucle ; en sortant, on
+  Le diaporama ignore les vidéos, n'affiche rien par-dessus les photos (sauf 5 s d'indication après une pause / reprise ou un changement de délai) et boucle ; en sortant, on
   arrive dans le dossier de la photo affichée, sur cette photo. Le délai (5 à 60 s) est mémorisé.
 
 ## Touches

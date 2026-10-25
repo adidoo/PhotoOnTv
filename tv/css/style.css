@@ -168,3 +168,17 @@ main { position: relative; height: 940px; overflow: hidden; }
   opacity: 0; transition: opacity 700ms ease-in-out;
 }
 #diapo img.visible { opacity: 1; }
+/* Indication affichée 5 s après pause / reprise ou changement de délai */
+#d-info {
+  position: absolute; right: 64px; bottom: 64px; display: flex; align-items: center; gap: 16px;
+  background: rgba(0, 0, 0, 0.6); padding: 16px 32px; border-radius: 40px; font-size: 34px;
+  opacity: 0; transition: opacity 300ms;
+}
+#d-info.visible { opacity: 1; }
+#d-info .icone {
+  width: 40px; height: 40px; background: center / contain no-repeat;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23eef2f6'%3E%3Cpath d='M8 5v14l11-7z'/%3E%3C/svg%3E");
+}
+#d-info.pause .icone {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23eef2f6'%3E%3Cpath d='M6 5h4v14H6zm8 0h4v14h-4z'/%3E%3C/svg%3E");
+}

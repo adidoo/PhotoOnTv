@@ -1,10 +1,12 @@
-// Diaporama plein écran des photos d'un dossier et de ses sous-dossiers (vidéos ignorées), sans
-// rien en surimpression. ↑ / ↓ : délai +/- 5 s ; ← / → : photo précédente / suivante ;
-// OK : pause / reprise ; Retour : sortie sur la photo affichée.
+// Diaporama plein écran des photos d'un dossier et de ses sous-dossiers (vidéos ignorées). Rien en
+// surimpression, sauf 5 s d'indication après une pause / reprise ou un changement de délai.
+// ↑ / ↓ : délai +/- 5 s ; ← / → : photo précédente / suivante ; OK : pause / reprise ;
+// Retour : sortie sur la photo affichée.
 // Les photos arrivent du serveur par paquets (/api/photos) : la racine en compte plus de 100 000.
 var Diaporama = (function () {
-  var PAS = 5, MIN = 5, MAX = 60, PAQUET = 200;
+  var PAS = 5, MIN = 5, MAX = 60, PAQUET = 200, DUREE_INFO = 5000;
   var ecran = document.getElementById('diapo');
+  var info = document.getElementById('d-info'), minuterieInfo = null;
   var calques = [document.getElementById('d-a'), document.getElementById('d-b')];
   var visible = 0;                 // calque affiché
   var ouvert = false, pause = false, minuterie = null, jeton = 0;
@@ -14,6 +16,15 @@ var Diaporama = (function () {
   var surFin = null, echecsDeSuite = 0;
   var delai = 10;
   try { delai = parseInt(localStorage.getItem('delaiDiaporama'), 10) || 10; } catch (e) {}
+
+  // Affiche l'état (lecture / pause) et le délai pendant 5 s
+  function indiquer() {
+    info.classList.toggle('pause', pause);
+    info.querySelector('.texte').textContent = (pause ? 'Pause' : 'Lecture') + ' · ' + delai + ' s';
+    info.classList.add('visible');
+    clearTimeout(minuterieInfo);
+    minuterieInfo = setTimeout(function () { info.classList.remove('visible'); }, DUREE_INFO);
+  }
 
   function sauver() { try { localStorage.setItem('delaiDiaporama', String(delai)); } catch (e) {} }
 
@@ -108,6 +119,8 @@ var Diaporama = (function () {
     ouvert = false;
     ++jeton;
     clearTimeout(minuterie);
+    clearTimeout(minuterieInfo);
+    info.classList.remove('visible');
     ecran.classList.remove('ouvert');
     calques.forEach(function (c) { c.classList.remove('visible'); c.removeAttribute('src'); });
     ecranDeVeille(true);
@@ -138,13 +151,13 @@ var Diaporama = (function () {
     ouvert: function () { return ouvert; },
     touche: function (k, T) {
       if (!ouvert) return false;
-      if (k === T.haut) { delai = Math.min(MAX, delai + PAS); sauver(); programmer(); }
-      else if (k === T.bas) { delai = Math.max(MIN, delai - PAS); sauver(); programmer(); }
+      if (k === T.haut) { delai = Math.min(MAX, delai + PAS); sauver(); programmer(); indiquer(); }
+      else if (k === T.bas) { delai = Math.max(MIN, delai - PAS); sauver(); programmer(); indiquer(); }
       else if (k === T.droite || k === T.avance) aller(rang + 1);
       else if (k === T.gauche || k === T.retourRapide) aller(rang - 1);
-      else if (k === T.ok || k === T.lecturePause) { pause = !pause; programmer(); }
-      else if (k === T.lecture) { pause = false; programmer(); }
-      else if (k === T.pause) { pause = true; programmer(); }
+      else if (k === T.ok || k === T.lecturePause) { pause = !pause; programmer(); indiquer(); }
+      else if (k === T.lecture) { pause = false; programmer(); indiquer(); }
+      else if (k === T.pause) { pause = true; programmer(); indiquer(); }
       else if (k === T.retour || k === T.stop) fermer();
       return true;
     }

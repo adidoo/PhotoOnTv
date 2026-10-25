@@ -43,7 +43,37 @@ var Video = (function () {
     if (f) f();
   }
 
-  function lire(url, nom, fin, erreur) {
+  // Ratio d'affichage : « 16:9 », « 1.777 » ou nombre ; 0 si inconnu
+  function ratio(dar) {
+    if (typeof dar === 'number') return dar > 0 ? dar : 0;
+    var m = /^(\d+(?:\.\d+)?)(?::(\d+(?:\.\d+)?))?$/.exec(dar || '');
+    if (!m) return 0;
+    var r = m[2] ? parseFloat(m[1]) / parseFloat(m[2]) : parseFloat(m[1]);
+    return r > 0 && isFinite(r) ? r : 0;
+  }
+
+  // AVPlay ignore la rotation des vidéos de téléphone et le rapport de pixels des MTS (1440×1080
+  // affiché en 16:9) : on règle nous-mêmes la rotation et un rectangle au bon ratio, rempli en entier.
+  function regler(info) {
+    var rot = info ? ((info.rotation || 0) % 360 + 360) % 360 : 0;
+    var r = info ? (ratio(info.dar) || (info.width && info.height ? info.width / info.height : 0)) : 0;
+    if (rot === 90 || rot === 270) r = r ? 1 / r : 0;
+    if (!r) {
+      av.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
+      av.setDisplayRect(0, 0, 1920, 1080);
+      return;
+    }
+    var w = 1920, h = Math.round(1920 / r);
+    if (h > 1080) { h = 1080; w = Math.round(1080 * r); }
+    av.setDisplayMethod('PLAYER_DISPLAY_MODE_FULL_SCREEN');
+    av.setDisplayRect(Math.round((1920 - w) / 2), Math.round((1080 - h) / 2), w, h);
+    if (rot) {
+      try { av.setDisplayRotation('PLAYER_DISPLAY_ROTATION_' + rot); } catch (e) {}
+    }
+  }
+
+  // info : Promise des infos de la vidéo (Api.info), attendue au plus 1,5 s
+  function lire(url, nom, fin, erreur, info) {
     ouvert = true; enPause = false; surFin = fin; surErreur = erreur;
     document.getElementById('l-nom').textContent = nom;
     document.body.classList.add('en-lecture');
@@ -51,16 +81,10 @@ var Video = (function () {
     lecteur.classList.toggle('avplay', !!av);
     montrerBarre();
     if (av) {
-      try {
-        av.open(url);
-        av.setDisplayRect(0, 0, 1920, 1080);
-        av.setListener({
-          onstreamcompleted: function () { setTimeout(terminer, 0); },
-          onerror: function () { setTimeout(echec, 0); },
-          oncurrentplaytime: function () { if (barre.classList.contains('visible')) majBarre(); }
-        });
-        av.prepareAsync(function () { if (ouvert) { av.play(); montrerBarre(); } }, echec);
-      } catch (e) { echec(); }
+      var delai = new Promise(function (ok) { setTimeout(function () { ok(null); }, 1500); });
+      Promise.race([info || Promise.resolve(null), delai]).then(function (i) {
+        if (ouvert) demarrerAv(url, i);
+      });
     } else {
       html.onended = terminer;
       html.onerror = echec;
@@ -69,6 +93,19 @@ var Video = (function () {
       var p = html.play();
       if (p && p.catch) p.catch(function () {});
     }
+  }
+
+  function demarrerAv(url, info) {
+    try {
+      av.open(url);
+      regler(info);
+      av.setListener({
+        onstreamcompleted: function () { setTimeout(terminer, 0); },
+        onerror: function () { setTimeout(echec, 0); },
+        oncurrentplaytime: function () { if (barre.classList.contains('visible')) majBarre(); }
+      });
+      av.prepareAsync(function () { if (ouvert) { av.play(); montrerBarre(); } }, echec);
+    } catch (e) { echec(); }
   }
 
   function fermer() {

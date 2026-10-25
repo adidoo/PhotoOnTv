@@ -97,7 +97,7 @@ var Visionneuse = (function () {
     var m = liste[rang];
     Video.lire(Api.fichier(m.path), m.name, null, function () {
       if (surMessage) surMessage('Format non lu par la télé : ' + m.name);
-    });
+    }, Api.info(m.path));
   }
 
   function fermer() {

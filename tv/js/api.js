@@ -45,6 +45,12 @@ var Api = (function () {
     fichier: function (chemin) {
       return CONFIG.serveur + '/api/file/' + chemin.split('/').map(encodeURIComponent).join('/');
     },
+    // Dimensions, rotation et ratio d'une vidéo (ffprobe côté serveur) ; null si indisponible
+    info: function (chemin) {
+      return fetch(url('/api/info', chemin)).then(function (r) {
+        return r.ok ? r.json() : null;
+      }).catch(function () { return null; });
+    },
     originalLisible: function (chemin) { return ORIGINAL_LISIBLE.test(chemin); },
     marquerAbsente: function (u) { sansVignette[u] = true; },
     estAbsente: function (u) { return !!sansVignette[u]; }

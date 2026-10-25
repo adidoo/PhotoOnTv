@@ -80,6 +80,7 @@ var Diaporama = (function () {
   function programmer() {
     clearTimeout(minuterie);
     if (!pause && ouvert) minuterie = setTimeout(function () { aller(rang + 1); }, delai * 1000);
+    ecranDeVeille(pause || !ouvert);
   }
 
   function aller(i) {
@@ -107,11 +108,16 @@ var Diaporama = (function () {
     });
   }
 
+  // Économiseur d'écran / mise en veille de la télé : coupé tant que le diaporama défile, rétabli en
+  // pause et à la sortie
+  var veilleActive = true;
   function ecranDeVeille(actif) {
+    if (actif === veilleActive) return;
+    veilleActive = actif;
     try {
       var etats = webapis.appcommon.AppCommonScreenSaverState;
       webapis.appcommon.setScreenSaver(actif ? etats.SCREEN_SAVER_ON : etats.SCREEN_SAVER_OFF);
-    } catch (e) {}
+    } catch (e) { console.log('[Diaporama] setScreenSaver : ' + e.message); }
   }
 
   function fermer() {

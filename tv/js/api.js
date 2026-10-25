@@ -28,8 +28,12 @@ var Api = (function () {
     return p;
   }
 
+  // À incrémenter quand des vignettes déjà servies changent côté serveur (elles sont en cache un an
+  // sur la télé) : 2 = vidéos anamorphiques (MTS) corrigées
+  var VERSION_VIGNETTES = 2;
+
   function vignette(chemin, taille, mtime) {
-    return url('/api/thumb', chemin, '&size=' + taille + (mtime ? '&v=' + mtime : ''));
+    return url('/api/thumb', chemin, '&size=' + taille + (mtime ? '&v=' + mtime : '') + '&g=' + VERSION_VIGNETTES);
   }
 
   // Formats que la télé décode elle-même : seuls ceux-là sont demandés en original
